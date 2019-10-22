@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/kostya-sh/parquet-go/parquet"
+	"github.com/iddoav/parquet-go/parquet"
 )
 
 var cmdSchema = &Command{

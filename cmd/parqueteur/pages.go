@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kostya-sh/parquet-go/parquet"
-	"github.com/kostya-sh/parquet-go/parquetformat"
+	"github.com/iddoav/parquet-go/parquet"
+	"github.com/iddoav/parquet-go/parquetformat"
 )
 
 var cmdPages = &Command{

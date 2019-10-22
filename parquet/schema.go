@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/kostya-sh/parquet-go/parquetformat"
+	"github.com/iddoav/parquet-go/parquetformat"
 )
 
 // Schema describes structure of the data that is stored in a parquet file.

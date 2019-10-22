@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kostya-sh/parquet-go/parquetformat"
+	"github.com/iddoav/parquet-go/parquetformat"
 )
 
 func TestReadFileMetaDataFromInvalidFiles(t *testing.T) {

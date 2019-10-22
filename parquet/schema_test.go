@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	pf "github.com/kostya-sh/parquet-go/parquetformat"
+	pf "github.com/iddoav/parquet-go/parquetformat"
 )
 
 func int32Ptr(v int32) *int32 {
