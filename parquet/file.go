@@ -13,6 +13,7 @@ type File struct {
 	Schema   Schema
 
 	ownReader bool
+	special   bool
 	reader    io.ReadSeeker
 }
 
@@ -47,6 +48,17 @@ func FileFromReader(r io.ReadSeeker) (*File, error) {
 	return &File{
 		MetaData: meta,
 		Schema:   schema,
+		special:  false,
+		reader:   r,
+	}, nil
+}
+
+// FileFromReaderGivenMetadata creates parquet.File from io.ReadSeeker and given metadata and schema
+func FileFromReaderGivenMetadata(r io.ReadSeeker, meta *parquetformat.FileMetaData, schema Schema) (*File, error) {
+	return &File{
+		MetaData: meta,
+		Schema:   schema,
+		special:  true,
 		reader:   r,
 	}, nil
 }
@@ -61,6 +73,9 @@ func (f File) NewReader(col Column, rg int) (*ColumnChunkReader, error) {
 	if col.Index() >= len(chunks) {
 		return nil, fmt.Errorf("rowgroup %d has %d column chunks, column %d requested",
 			rg, len(chunks), col.Index())
+	}
+	if f.special {
+		return newColumnChunkSpecialReader(f.reader, f.MetaData, col, chunks[0].FileOffset, chunks[col.Index()])
 	}
 	return newColumnChunkReader(f.reader, f.MetaData, col, chunks[col.Index()])
 }

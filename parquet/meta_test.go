@@ -62,3 +62,32 @@ func TestReadFileMetaData(t *testing.T) {
 		t.Errorf("Field type: was %s, expected BOOLEAN", fieldType)
 	}
 }
+
+func TestReadOnlyMetaData(t *testing.T) {
+	r, err := os.Open("testdata/only_metadata2")
+	if err != nil {
+		t.Fatalf("Error: %s", err)
+	}
+	defer r.Close()
+
+	m, err := ReadFileMetaData(r)
+	if err != nil {
+		t.Errorf("Unexptected error: %s", err)
+	}
+	b, _ := json.MarshalIndent(m, "", " ")
+	t.Logf("Read: %s", b)
+
+	// No need to write too many checks here. If a record has been read then
+	// there is a very high chance that it has been deserialized by thrift
+	// properly
+	if m.NumRows != 1 {
+		t.Errorf("NumRows: was %d, expected 1", m.NumRows)
+	}
+	if len(m.Schema) != 2 {
+		t.Errorf("Shema size: was %d, expected 2", len(m.Schema))
+	}
+	fieldType := *m.Schema[1].Type
+	if fieldType != parquetformat.Type_BOOLEAN {
+		t.Errorf("Field type: was %s, expected BOOLEAN", fieldType)
+	}
+}

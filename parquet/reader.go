@@ -95,6 +95,59 @@ func newColumnChunkReader(r io.ReadSeeker, meta *parquetformat.FileMetaData, col
 	return cr, nil
 }
 
+func newColumnChunkSpecialReader(r io.ReadSeeker, meta *parquetformat.FileMetaData, col Column, rowGroupFileOffset int64, chunk *parquetformat.ColumnChunk) (*ColumnChunkReader, error) {
+	c := col.Index()
+	// chunk.FileOffset is useless so ChunkMetaData is required here
+	// as we cannot read it from r
+	// see https://issues.apache.org/jira/browse/PARQUET-291
+	if chunk.MetaData == nil {
+		return nil, fmt.Errorf("missing meta data for column %c", c)
+	}
+
+	if typ := *col.schemaElement.Type; chunk.MetaData.Type != typ {
+		return nil, fmt.Errorf("wrong type in column chunk metadata, expected %s was %s",
+			typ, chunk.MetaData.Type)
+	}
+
+	offset := chunk.MetaData.DataPageOffset - rowGroupFileOffset
+	if chunk.MetaData.DictionaryPageOffset != nil {
+		offset = *chunk.MetaData.DictionaryPageOffset - rowGroupFileOffset
+	}
+	//offset = 0
+
+	cr := &ColumnChunkReader{
+		col:       col,
+		reader:    &countingReader{rs: r, offset: offset},
+		meta:      meta,
+		chunkMeta: chunk.MetaData,
+	}
+
+	nested := strings.IndexByte(col.name, '.') >= 0
+	repType := *col.schemaElement.RepetitionType
+	if !nested && repType == parquetformat.FieldRepetitionType_REQUIRED {
+		// TODO: also check that len(Path) = maxD
+		// For data that is required, the definition levels are not encoded and
+		// always have the value of the max definition level.
+		cr.dDecoder = constDecoder(col.maxD)
+		// TODO: document level ranges
+	} else {
+		cr.dDecoder = newRLEDecoder(bits.Len16(col.maxD))
+	}
+	if !nested && repType != parquetformat.FieldRepetitionType_REPEATED {
+		// TODO: I think we need to check all schemaElements in the path (confirm if above)
+		cr.rDecoder = constDecoder(0)
+		// TODO: clarify the following comment from parquet-format/README:
+		// If the column is not nested the repetition levels are not encoded and
+		// always have the value of 1
+	} else {
+		cr.rDecoder = newRLEDecoder(bits.Len16(col.maxR))
+	}
+
+	cr.err = cr.readPage(true)
+
+	return cr, nil
+}
+
 func (cr *ColumnChunkReader) newValuesDecoder(pageEncoding parquetformat.Encoding) (valuesDecoder, error) {
 	if pageEncoding == parquetformat.Encoding_PLAIN_DICTIONARY {
 		pageEncoding = parquetformat.Encoding_RLE_DICTIONARY
